@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat tea (Login Simples e Exclusão)</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #e5ddd5; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        
+        #login-screen, #app-screen { width: 100%; height: 100%; max-width: 1200px; background: #fff; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        #app-screen { display: none; flex-direction: row; position: relative; }
+        
+        /* Login Simples */
+        #login-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; background: #f0f2f5; }
+        .login-box { background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; width: 350px; }
+        .login-box p { color: #666; font-size: 14px; margin-bottom: 20px; }
+        .login-box input, .login-box button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 16px; }
+        .login-box input { border: 1px solid #ccc; outline: none; }
+        .login-box button { background: #00a884; color: white; border: none; cursor: pointer; font-weight: bold; }
+        .login-box button:hover { background: #008f6f; }
+        .saved-accounts { margin-top: 20px; text-align: left; }
+        .account-chip { background: #e2e8f0; padding: 8px 12px; border-radius: 15px; display: inline-block; margin: 5px; cursor: pointer; font-size: 14px; }
+        .account-chip:hover { background: #cbd5e1; }
+        
+        /* Sidebar */
+        .sidebar { width: 30%; border-right: 1px solid #d1d7db; display: flex; flex-direction: column; background: #fff; }
+        .sidebar-header { background: #f0f2f5; padding: 15px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .header-actions { display: flex; gap: 10px; }
+        .action-link { font-size: 12px; color: #00a884; cursor: pointer; text-decoration: underline; }
+        .user-list { flex: 1; overflow-y: auto; }
+        .list-item { padding: 15px; border-bottom: 1px solid #f2f2f2; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+        .list-item:hover { background: #f5f6f6; }
+        .item-info { display: flex; align-items: center; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; background: #dfe5e7; margin-right: 15px; display: flex; justify-content: center; align-items: center; font-weight: bold; color: #555; }
+        .group-avatar { background: #00a884; color: white; }
+        
+        /* Botão de Excluir */
+        .delete-contact-btn { color: #dc3545; font-size: 18px; border: none; background: none; cursor: pointer; padding: 5px; display: none; }
+        .list-item:hover .delete-contact-btn { display: block; }
+        .delete-contact-btn:hover { transform: scale(1.1); }
+
+        /* Chat Area */
+        .chat-area { width: 70%; display: flex; flex-direction: column; background: #efeae2; }
+        .chat-header { background: #f0f2f5; padding: 15px; font-weight: bold; border-bottom: 1px solid #d1d7db; display: flex; flex-direction: column; }
+        .chat-subtitle { font-size: 11px; color: #666; font-weight: normal; margin-top: 2px; }
+        .messages-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; }
+        
+        /* Mensagens */
+        .message { max-width: 65%; margin-bottom: 10px; padding: 10px 15px; border-radius: 8px; position: relative; word-wrap: break-word; }
+        .message.sent { background: #d9fdd3; align-self: flex-end; border-top-right-radius: 0; }
+        .message.received { background: #fff; align-self: flex-start; border-top-left-radius: 0; }
+        .sender-name { font-size: 10px; color: #00a884; font-weight: bold; margin-bottom: 3px; }
+        .msg-actions { font-size: 11px; color: #888; margin-top: 5px; display: flex; gap: 10px; }
+        .msg-actions span { cursor: pointer; }
+        .msg-actions span:hover { text-decoration: underline; }
+        .delete-action { color: #dc3545; }
+        .edited-tag { font-size: 10px; color: #888; font-style: italic; margin-left: 5px; }
+        .deleted-msg { font-style: italic; color: #888; }
+
+        /* Input Area */
+        .chat-input-area { background: #f0f2f5; padding: 10px 15px; }
+        .input-row { display: flex; align-items: center; gap: 8px; }
+        .input-row input { flex: 1; padding: 12px; border: none; border-radius: 8px; outline: none; font-size: 15px; }
+        .send-btn { background: none; border: none; font-size: 20px; cursor: pointer; padding: 5px; color: #00a884; font-weight: bold; }
+        
+        #empty-chat { flex: 1; display: flex; justify-content: center; align-items: center; color: #888; font-size: 18px; text-align: center; padding: 20px; }
+
+        /* Modal de Grupo */
+        .modal-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-content h3 { margin-bottom: 15px; }
+        .modal-content input { width: 100%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 4px; }
+        .checkbox-list { max-height: 150px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #eee; padding: 10px; }
+        .checkbox-list label { display: block; margin-bottom: 8px; cursor: pointer; }
+        .modal-btns { display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-btns button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-cancel { background: #ccc; }
+        .btn-confirm { background: #00a884; color: white; }
+    </style>
+</head>
+<body>
+
+    <!-- Tela de Login Simples -->
+    <div id="login-screen">
+        <div class="login-box">
+            <h2>Bem-vindo ao Chat</h2>
+            <p>Crie um nome de usuário ou entre com um existente.</p>
+            <input type="text" id="username-input" placeholder="Qual é o seu nome?">
+            <button id="login-btn">Entrar</button>
+            <div class="saved-accounts" id="saved-accounts-container">
+                <p style="font-size: 12px; color: #666; margin-bottom: 5px;">Contas recentes no seu aparelho:</p>
+                <div id="saved-accounts-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tela do App -->
+    <div id="app-screen">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <span id="my-profile-name">Perfil</span>
+                <div class="header-actions">
+                    <span class="action-link" onclick="openGroupModal()">+ Criar Grupo</span>
+                    <span class="action-link" onclick="logout()" style="color: #dc3545;">Sair</span>
+                </div>
+            </div>
+            <div class="user-list" id="user-list"></div>
+        </div>
+
+        <div class="chat-area">
+            <div id="empty-chat">Selecione um contato ou grupo no menu lateral para começar a conversar.</div>
+            
+            <div id="active-chat" style="display: none; height: 100%; flex-direction: column;">
+                <div class="chat-header">
+                    <span id="chat-header-name">Contato</span>
+                    <span id="chat-subtitle" class="chat-subtitle"></span>
+                </div>
+                <div class="messages-container" id="messages-container"></div>
+
+                <div class="chat-input-area">
+                    <div class="input-row">
+                        <input type="text" id="message-input" placeholder="Digite sua mensagem..." autocomplete="off">
+                        <button class="send-btn" id="send-btn" title="Enviar">➤</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Criação de Grupo -->
+        <div class="modal-overlay" id="group-modal">
+            <div class="modal-content">
+                <h3>Novo Grupo</h3>
+                <input type="text" id="group-name-input" placeholder="Nome do grupo...">
+                <p style="font-size: 12px; margin-bottom: 5px;">Selecione quem você quer adicionar:</p>
+                <div class="checkbox-list" id="group-participants-list"></div>
+                <div class="modal-btns">
+                    <button class="btn-cancel" onclick="closeGroupModal()">Cancelar</button>
+                    <button class="btn-confirm" onclick="createGroup()">Criar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- IMPORTAÇÕES DO FIREBASE (Agora com arrayRemove) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, addDoc, serverTimestamp, query, orderBy, arrayUnion, arrayRemove, where } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // ==========================================
+        // COLOQUE SUAS CREDENCIAIS AQUI
+        // ==========================================
+            const firebaseConfig = {
+  apiKey: "AIzaSyDVGhhPrIK-STEV4q4bmfiT2hpcxZ4Ebzc",
+  authDomain: "ness-888f9.firebaseapp.com",
+  projectId: "ness-888f9",
+  storageBucket: "ness-888f9.firebasestorage.app",
+  messagingSenderId: "409592000103",
+  appId: "1:409592000103:web:3c36ba69b9a7c1957caec2",
+  measurementId: "G-WVLCRFWE5M"
+ };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Estado Global
+        let currentUser = sessionStorage.getItem('active_user');
+        let currentChatId = null;
+        let isCurrentChatGroup = false;
+        let unsubscribeMessages = null;
+        
+        let allUsers = []; 
+        let hiddenContacts = []; 
+
+        // ------------------ SISTEMA DE LOGIN ------------------
+        function loadSavedAccounts() {
+            const accounts = JSON.parse(localStorage.getItem('saved_accounts') || '[]');
+            const list = document.getElementById('saved-accounts-list');
+            list.innerHTML = '';
+            accounts.forEach(acc => {
+                const chip = document.createElement('span');
+                chip.className = 'account-chip';
+                chip.innerText = acc;
+                chip.onclick = () => login(acc);
+                list.appendChild(chip);
+            });
+        }
+        loadSavedAccounts();
+
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            const username = document.getElementById('username-input').value.trim().toLowerCase();
+            if (!username) return alert("Digite um nome!");
+            
+            const userRef = doc(db, "users", username);
+            const userSnap = await getDoc(userRef);
+            
+            if (!userSnap.exists()) {
+                await setDoc(userRef, { username: username, hiddenContacts: [], timestamp: serverTimestamp() });
+                let accounts = JSON.parse(localStorage.getItem('saved_accounts') || '[]');
+                if (!accounts.includes(username)) { 
+                    accounts.push(username); 
+                    localStorage.setItem('saved_accounts', JSON.stringify(accounts)); 
+                }
+            }
+            login(username);
+        });
+
+        function login(username) {
+            sessionStorage.setItem('active_user', username);
+            currentUser = username;
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app-screen').style.display = 'flex';
+            document.getElementById('my-profile-name').innerText = `👤 ${currentUser}`;
+            
+            // Fica escutando as alterações do usuário logado (ex: quando ele deleta um contato)
+            onSnapshot(doc(db, "users", currentUser), (docSnap) => {
+                if(docSnap.exists()){
+                    hiddenContacts = docSnap.data().hiddenContacts || [];
+                    loadSidebar();
+                }
+            });
+        }
+
+        window.logout = () => { sessionStorage.removeItem('active_user'); location.reload(); }
+        
+        // Mantém o usuário logado se ele atualizar a página
+        if (currentUser) login(currentUser);
+
+
+        // ------------------ CARREGAR CONTATOS E GRUPOS ------------------
+        function loadSidebar() {
+            const list = document.getElementById('user-list');
+            list.innerHTML = '';
+            
+            // Carregar Grupos onde o usuário logado está na lista de participantes
+            const qGroups = query(collection(db, "groups"), where("participants", "array-contains", currentUser));
+            onSnapshot(qGroups, (snapshot) => {
+                document.querySelectorAll('.group-item').forEach(el => el.remove());
+                snapshot.forEach((docSnap) => {
+                    const group = docSnap.data();
+                    const div = document.createElement('div');
+                    div.className = 'list-item group-item';
+                    div.innerHTML = `
+                        <div class="item-info">
+                            <div class="avatar group-avatar">G</div>
+                            <div>${group.name}</div>
+                        </div>
+                        <button class="delete-contact-btn" title="Sair do Grupo" onclick="leaveGroup('${docSnap.id}', '${group.name}', event)">🗑️</button>
+                    `;
+                    div.onclick = () => openChat(docSnap.id, group.name, true, group.participants);
+                    list.prepend(div);
+                });
+            });
+
+            // Carregar todos os usuários (exceto eu mesmo e contatos que excluí)
+            onSnapshot(collection(db, "users"), (snapshot) => {
+                document.querySelectorAll('.contact-item').forEach(el => el.remove());
+                allUsers = [];
+                
+                snapshot.forEach((docSnap) => {
+                    const user = docSnap.data().username;
+                    if (user !== currentUser) {
+                        allUsers.push(user); // Guarda para o modal de criar grupos
+                        
+                        // Só mostra se o contato NÃO estiver na lista de contatos deletados
+                        if (!hiddenContacts.includes(user)) {
+                            const div = document.createElement('div');
+                            div.className = 'list-item contact-item';
+                            div.innerHTML = `
+                                <div class="item-info">
+                                    <div class="avatar">${user.charAt(0).toUpperCase()}</div>
+                                    <div>${user}</div>
+                                </div>
+                                <button class="delete-contact-btn" title="Excluir Contato" onclick="deleteContact('${user}', event)">🗑️</button>
+                            `;
+                            div.onclick = () => openChat(user, user, false);
+                            list.appendChild(div);
+                        }
+                    }
+                });
+            });
+        }
+
+
+        // ------------------ EXCLUIR CONTATOS E GRUPOS ------------------
+        
+        // Excluir um contato pessoalmente (Adiciona na lista oculta do Firebase do usuário atual)
+        window.deleteContact = async (contactName, event) => {
+            event.stopPropagation(); // Impede de abrir o chat ao clicar na lixeira
+            if(confirm(`Deseja remover ${contactName} da sua lista?\n\nEle será excluído apenas para você.`)) {
+                await updateDoc(doc(db, "users", currentUser), {
+                    hiddenContacts: arrayUnion(contactName)
+                });
+                
+                // Se o chat atual for o do contato excluído, fecha a tela
+                const expectedChatId = [currentUser, contactName].sort().join('_');
+                if (currentChatId === expectedChatId) closeChatWindow();
+            }
+        };
+
+        // Sair/Excluir Grupo (Remove o usuário atual do Array de participantes)
+        window.leaveGroup = async (groupId, groupName, event) => {
+            event.stopPropagation();
+            if(confirm(`Deseja sair e excluir o grupo "${groupName}"?\n\nVocê não verá mais as mensagens e sumirá do grupo.`)) {
+                await updateDoc(doc(db, "groups", groupId), {
+                    participants: arrayRemove(currentUser)
+                });
+                
+                // Se o chat atual for o do grupo abandonado, fecha a tela
+                if (currentChatId === groupId) closeChatWindow();
+            }
+        };
+
+        function closeChatWindow() {
+            document.getElementById('active-chat').style.display = 'none';
+            document.getElementById('empty-chat').style.display = 'flex';
+            currentChatId = null;
+        }
+
+
+        // ------------------ CHAT E MENSAGENS ------------------
+        window.openChat = (id, displayName, isGroup, participants = []) => {
+            document.getElementById('empty-chat').style.display = 'none';
+            document.getElementById('active-chat').style.display = 'flex';
+            
+            document.getElementById('chat-header-name').innerText = displayName;
+            document.getElementById('chat-subtitle').innerText = isGroup ? `Membros: ${participants.join(', ')}` : '';
+            
+            isCurrentChatGroup = isGroup;
+            currentChatId = isGroup ? id : [currentUser, id].sort().join('_');
+            
+            loadMessages();
+        };
+
+        function loadMessages() {
+            if (unsubscribeMessages) unsubscribeMessages();
+            const q = query(collection(db, "chats", currentChatId, "messages"), orderBy("timestamp", "asc"));
+            
+            unsubscribeMessages = onSnapshot(q, (snapshot) => {
+                const container = document.getElementById('messages-container');
+                container.innerHTML = '';
+                snapshot.forEach((docSnap) => {
+                    const msg = docSnap.data();
+                    const msgId = docSnap.id;
+                    const isMe = msg.sender === currentUser;
+                    
+                    const div = document.createElement('div');
+                    div.className = `message ${isMe ? 'sent' : 'received'}`;
+                    
+                    let headerHTML = (isCurrentChatGroup && !isMe) ? `<div class="sender-name">${msg.sender}</div>` : '';
+                    let contentHTML = '';
+                    let actionsHTML = '';
+
+                    if (msg.isDeleted) {
+                        contentHTML = `<span class="deleted-msg">🚫 Mensagem apagada</span>`;
+                    } else {
+                        contentHTML = `<span>${msg.text}</span>`;
+                        if (msg.isEdited) contentHTML += `<span class="edited-tag">(Editada)</span>`;
+                        
+                        if (isMe) {
+                            actionsHTML = `<div class="msg-actions">`;
+                            actionsHTML += `<span onclick="editMessage('${msgId}', '${msg.text.replace(/'/g, "\\'")}', ${msg.timestamp?.toMillis() || Date.now()})">Editar</span>`;
+                            actionsHTML += `<span class="delete-action" onclick="deleteMessage('${msgId}')">Apagar</span></div>`;
+                        }
+                    }
+
+                    div.innerHTML = headerHTML + contentHTML + actionsHTML;
+                    container.appendChild(div);
+                });
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        window.editMessage = async (docId, oldText, timeMillis) => {
+            const timeDiff = Date.now() - timeMillis;
+            if (timeDiff > 15 * 60 * 1000) return alert("Você só pode editar mensagens até 15 minutos após o envio.");
+            const newText = prompt("Edite sua mensagem:", oldText);
+            if (newText && newText.trim() !== "" && newText !== oldText) {
+                await updateDoc(doc(db, "chats", currentChatId, "messages", docId), { text: newText, isEdited: true });
+            }
+        };
+
+        window.deleteMessage = async (docId) => {
+            if(confirm("Apagar esta mensagem para todos?")) {
+                await updateDoc(doc(db, "chats", currentChatId, "messages", docId), { isDeleted: true, text: "" });
+            }
+        };
+
+        document.getElementById('send-btn').addEventListener('click', async () => {
+            const input = document.getElementById('message-input');
+            const text = input.value.trim();
+            if (!text || !currentChatId) return;
+
+            await addDoc(collection(db, "chats", currentChatId, "messages"), {
+                sender: currentUser, text: text,
+                timestamp: serverTimestamp(), isEdited: false, isDeleted: false
+            });
+            input.value = '';
+        });
+
+        document.getElementById('message-input').addEventListener('keypress', (e) => { 
+            if (e.key === 'Enter') document.getElementById('send-btn').click(); 
+        });
+
+        // ------------------ SISTEMA DE GRUPOS ------------------
+        window.openGroupModal = () => {
+            document.getElementById('group-modal').style.display = 'flex';
+            const list = document.getElementById('group-participants-list');
+            list.innerHTML = '';
+            
+            // Mostra apenas usuários que não estão ocultos
+            allUsers.forEach(user => {
+                if(!hiddenContacts.includes(user)) {
+                    list.innerHTML += `<label><input type="checkbox" value="${user}" class="group-checkbox"> ${user}</label>`;
+                }
+            });
+        }
+
+        window.closeGroupModal = () => { document.getElementById('group-modal').style.display = 'none'; }
+
+        window.createGroup = async () => {
+            const name = document.getElementById('group-name-input').value.trim();
+            if (!name) return alert("Digite um nome para o grupo!");
+
+            const checkboxes = document.querySelectorAll('.group-checkbox:checked');
+            let participants = [currentUser]; 
+            checkboxes.forEach(cb => participants.push(cb.value));
+
+            if (participants.length < 2) return alert("Selecione pelo menos mais uma pessoa!");
+
+            const groupId = 'group_' + Date.now();
+            await setDoc(doc(db, "groups", groupId), {
+                name: name,
+                participants: participants,
+                createdBy: currentUser,
+                timestamp: serverTimestamp()
+            });
+
+            closeGroupModal();
+            document.getElementById('group-name-input').value = '';
+            alert("Grupo criado com sucesso!");
+        }
+    </script>
+</body>
+</html>
